@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Video Call (4 People)</title>
+    <title>Dynamic Group Video Call</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -47,15 +47,18 @@
         .btn-blue { background: #2196F3; }
         .btn-red { background: #f44336; padding: 6px 8px; font-size: 11px; }
 
-        /* ၄ ယောက်စာ ကွက်လပ် (2x2 Grid) */
+        /* အလိုအလျောက် ပြောင်းလဲမည့် Grid စနစ် */
         .video-grid {
             width: 100vw; height: 100vh;
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(2, 1fr);
             gap: 4px; padding: 4px; background: #000;
-            padding-top: 85px; /* ထိန်းချုပ်ခလုတ်များအတွက် နေရာချန်ရန် */
+            padding-top: 85px;
         }
+        /* လူအရေအတွက်အလိုက် ကွက်လပ်ပြောင်းလဲပုံ */
+        .video-grid.layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+        .video-grid.layout-2 { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); }
+        .video-grid.layout-3, .video-grid.layout-4 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
+
         .video-box {
             position: relative; width: 100%; height: 100%;
             background: #111; border-radius: 8px; overflow: hidden;
@@ -81,7 +84,7 @@
 <body>
 
     <div id="start-screen" class="start-screen">
-        <h2>Group Video Call</h2>
+        <h2>Dynamic Group Video Call</h2>
         <p>ဗီဒီယိုကောလ် စတင်ရန် ကင်မရာကို ဖွင့်ပါ</p>
         <button id="start-cam-btn">ကင်မရာ စတင်ဖွင့်မည်</button>
     </div>
@@ -98,24 +101,9 @@
         </div>
     </div>
 
-    <div class="video-grid">
-        <!-- Remote Video 1 -->
-        <div class="video-box">
-            <video id="remote-video-1" autoplay playsinline></video>
-            <div class="label" id="label-1">သူငယ်ချင်း ၁ (လွတ်နေသည်)</div>
-        </div>
-        <!-- Remote Video 2 -->
-        <div class="video-box">
-            <video id="remote-video-2" autoplay playsinline></video>
-            <div class="label" id="label-2">သူငယ်ချင်း ၂ (လွတ်နေသည်)</div>
-        </div>
-        <!-- Remote Video 3 -->
-        <div class="video-box">
-            <video id="remote-video-3" autoplay playsinline></video>
-            <div class="label" id="label-3">သူငယ်ချင်း ၃ (လွတ်နေသည်)</div>
-        </div>
-        <!-- Local Video (ကိုယ်ပိုင်ဗီဒီယို) -->
-        <div class="video-box">
+    <!-- ဗီဒီယိုကွက်လပ်များကို လူဝင်လာမှသာ အလိုအလျောက် ထည့်သွင်းမည် -->
+    <div class="video-grid layout-1" id="video-grid">
+        <div class="video-box" id="local-box">
             <video id="local-video" autoplay muted playsinline></video>
             <div class="label">ကိုယ် (Local)</div>
         </div>
@@ -127,6 +115,7 @@
         const startScreen = document.getElementById('start-screen');
         const controlsPanel = document.getElementById('controls-panel');
         const startCamBtn = document.getElementById('start-cam-btn');
+        const videoGrid = document.getElementById('video-grid');
         const localVideo = document.getElementById('local-video');
         const myCustomIdInput = document.getElementById('my-custom-id');
         const setIdBtn = document.getElementById('set-id-btn');
@@ -135,15 +124,15 @@
         const connectBtn = document.getElementById('connect-btn');
         const statusText = document.getElementById('status-text');
 
-        const remoteVideos = [
-            { video: document.getElementById('remote-video-1'), label: document.getElementById('label-1'), peerId: null },
-            { video: document.getElementById('remote-video-2'), label: document.getElementById('label-2'), peerId: null },
-            { video: document.getElementById('remote-video-3'), label: document.getElementById('label-3'), peerId: null }
-        ];
-
         let localStream;
         let peer;
         let activeCalls = {};
+
+        function updateGridLayout() {
+            const boxes = videoGrid.querySelectorAll('.video-box');
+            const count = boxes.length; // ၁ မှ ၄ အထိ
+            videoGrid.className = 'video-grid layout-' + Math.min(count, 4);
+        }
 
         startCamBtn.addEventListener('click', () => {
             navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -171,7 +160,7 @@
             peer = new Peer(id);
 
             peer.on('open', (assignedId) => {
-                statusText.innerText = "ကိုယ့် ID: " + assignedId + " (Group Call အသင့်ဖြစ်ပါပြီ)";
+                statusText.innerText = "ကိုယ့် ID: " + assignedId + " (အသင့်ဖြစ်ပါပြီ)";
                 myCustomIdInput.disabled = true;
                 setIdBtn.disabled = true;
                 peerIdInput.disabled = false;
@@ -189,7 +178,6 @@
                 }
             });
 
-            // အခြားသူများ ဖုန်းခေါ်လာပါက လက်ခံရန်
             peer.on('call', (call) => {
                 call.answer(localStream);
                 setupCall(call);
@@ -200,35 +188,53 @@
             const remotePeerId = call.peer;
             if (activeCalls[remotePeerId]) return;
 
-            // လွတ်နေသော ဗီဒီယိုကွက်လပ်ကို ရှာမည်
-            let slot = remoteVideos.find(s => !s.peerId);
-            if (!slot) {
-                call.close(); // ကွက်လပ်မရှိတော့ပါက ငြင်းပယ်မည်
+            // အများဆုံး ၃ ယောက် (စုစုပေါင်း ၄ ယောက်) ထက်ပိုမိုချိတ်ဆက်မှုကို ကန့်သတ်ရန်
+            if (Object.keys(activeCalls).length >= 3) {
+                call.close();
                 return;
             }
 
-            slot.peerId = remotePeerId;
             activeCalls[remotePeerId] = call;
 
+            // သူငယ်ချင်းအတွက် ဗီဒီယိုကွက်လပ်အသစ်ကို အလိုအလျောက် ဖန်တီးမည်
+            const videoBox = document.createElement('div');
+            videoBox.className = 'video-box';
+            videoBox.id = 'box-' + remotePeerId;
+
+            const remoteVideo = document.createElement('video');
+            remoteVideo.autoplay = true;
+            remoteVideo.playsinline = true;
+
+            const label = document.createElement('div');
+            label.className = 'label';
+            label.innerText = remotePeerId;
+
+            videoBox.appendChild(remoteVideo);
+            videoBox.appendChild(label);
+            videoGrid.appendChild(videoBox);
+
+            updateGridLayout();
+
             call.on('stream', (remoteStream) => {
-                slot.video.srcObject = remoteStream;
-                slot.label.innerText = "ချိတ်ဆက်ထားသည်: " + remotePeerId;
+                remoteVideo.srcObject = remoteStream;
                 statusText.innerText = remotePeerId + " နှင့် ချိတ်ဆက်ပြီးပါပြီ";
             });
 
             call.on('close', () => {
-                slot.video.srcObject = null;
-                slot.label.innerText = "လွတ်နေသည်";
-                slot.peerId = null;
-                delete activeCalls[remotePeerId];
+                removeRemoteBox(remotePeerId);
             });
 
             call.on('error', () => {
-                slot.video.srcObject = null;
-                slot.label.innerText = "လွတ်နေသည်";
-                slot.peerId = null;
-                delete activeCalls[remotePeerId];
+                removeRemoteBox(remotePeerId);
             });
+        }
+
+        function removeRemoteBox(remotePeerId) {
+            const box = document.getElementById('box-' + remotePeerId);
+            if (box) box.remove();
+            delete activeCalls[remotePeerId];
+            updateGridLayout();
+            statusText.innerText = remotePeerId + " ထွက်သွားပါပြီ";
         }
 
         setIdBtn.addEventListener('click', () => {
@@ -250,12 +256,14 @@
             myCustomIdInput.value = "";
             statusText.innerText = "ID ဖျက်ပြီးပါပြီ။";
             if (peer) peer.destroy();
-            remoteVideos.forEach(slot => {
-                if (slot.video.srcObject) slot.video.srcObject = null;
-                slot.label.innerText = "လွတ်နေသည်";
-                slot.peerId = null;
+
+            // ချိတ်ဆက်ထားသမျှ သူငယ်ချင်းများ၏ Box များကို ဖျက်မည်
+            Object.keys(activeCalls).forEach(id => {
+                const box = document.getElementById('box-' + id);
+                if (box) box.remove();
             });
             activeCalls = {};
+            updateGridLayout();
         });
 
         connectBtn.addEventListener('click', () => {
@@ -266,6 +274,10 @@
             }
             if (activeCalls[targetId]) {
                 alert('ဤသူနှင့် ချိတ်ဆက်ပြီးသား ဖြစ်ပါသည်။');
+                return;
+            }
+            if (Object.keys(activeCalls).length >= 3) {
+                alert('အခန်းတွဲတွင် လူပြည့်နေပါပြီ (အများဆုံး ၄ ယောက်)။');
                 return;
             }
 
