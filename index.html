@@ -1,304 +1,293 @@
+
 <!DOCTYPE html>
-<html lang="my">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic Group Video Call</title>
-    
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#000000">
-
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>V Call App</title>
     <style>
-        * { box-sizing: border-box; }
-        html, body {
-            margin: 0; padding: 0;
-            width: 100vw; height: 100vh;
-            background: #000; color: #fff;
-            font-family: sans-serif;
-            overflow: hidden;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
         }
-        .start-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            background: #111; z-index: 1000; gap: 15px; padding: 20px; text-align: center;
+        body {
+            background-color: #efeae2;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
-        .start-screen button {
-            padding: 12px 24px; font-size: 16px; background: #4CAF50; 
-            color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;
+        .app-header {
+            background-color: #008069;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .controls {
-            position: absolute; top: 6px; left: 6px; right: 6px;
-            z-index: 100; display: flex; flex-direction: column; gap: 4px;
-            background: rgba(0, 0, 0, 0.85); padding: 8px; border-radius: 8px;
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .app-title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #my-id-display {
+            font-size: 12px;
+            color: #b3dfd6;
+        }
+        .call-actions button {
+            background-color: #01a884;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .video-container {
             display: none;
-        }
-        .input-group { display: flex; gap: 5px; }
-        input {
-            flex: 1; padding: 6px 8px; font-size: 13px;
-            border-radius: 4px; border: 1px solid #444;
-            background: #222; color: #fff;
-        }
-        button {
-            padding: 6px 10px; background: #4CAF50; color: white;
-            border: none; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer;
-        }
-        button:disabled { background: #555; cursor: not-allowed; }
-        .btn-blue { background: #2196F3; }
-        .btn-red { background: #f44336; }
-
-        /* အလိုအလျောက် ပြောင်းလဲမည့် Grid စနစ် */
-        .video-grid {
-            width: 100vw; height: 100vh;
-            display: grid;
-            gap: 4px; padding: 4px; background: #000;
-            padding-top: 85px;
-        }
-        .video-grid.layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
-        .video-grid.layout-2 { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); }
-        .video-grid.layout-3, .video-grid.layout-4 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
-
-        .video-box {
-            position: relative; width: 100%; height: 100%;
-            background: #111; border-radius: 8px; overflow: hidden;
-            display: flex; justify-content: center; align-items: center;
-            border: 1px solid #333;
+            background-color: #111b21;
+            padding: 10px;
+            position: relative;
+            height: 250px;
+            gap: 10px;
+            justify-content: center;
         }
         video {
-            width: 100%; height: 100%; object-fit: cover; background: #111;
+            width: 48%;
+            height: 100%;
+            background-color: #222;
+            border-radius: 8px;
+            object-fit: cover;
         }
-        .label {
-            position: absolute; bottom: 6px; left: 6px;
-            background: rgba(0, 0, 0, 0.7); padding: 2px 6px;
-            border-radius: 4px; font-size: 10px; color: #fff;
+        .end-call-btn {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ea0038;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
         }
-        .status-box {
-            position: absolute; bottom: 8px; left: 8px; right: 8px;
-            background: rgba(0, 0, 0, 0.85); border: 1px solid #444;
-            padding: 5px 8px; border-radius: 6px; font-size: 11px;
-            z-index: 100; color: #ff9800; text-align: center;
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background-color: #efeae2;
+        }
+        .message {
+            max-width: 80%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 15px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        .message.sent {
+            background-color: #d9fdd3;
+            align-self: flex-end;
+        }
+        .message.received {
+            background-color: white;
+            align-self: flex-start;
+        }
+        .message img {
+            max-width: 100%;
+            border-radius: 6px;
+            display: block;
+        }
+        .message .time {
+            font-size: 10px;
+            color: #667781;
+            display: block;
+            text-align: right;
+            margin-top: 4px;
+        }
+        .input-area {
+            background-color: #f0f2f5;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .icon-btn {
+            font-size: 22px;
+            cursor: pointer;
+        }
+        #file-input {
+            display: none;
+        }
+        #text-input {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 20px;
+            outline: none;
+            background-color: white;
+        }
+        #send-btn {
+            background-color: #00a884;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
         }
     </style>
+</script>
 </head>
 <body>
 
-    <div id="start-screen" class="start-screen">
-        <h2>Dynamic Group Video Call</h2>
-        <p>ဗီဒီယိုကောလ် စတင်ရန် ကင်မရာကို ဖွင့်ပါ</p>
-        <button id="start-cam-btn">ကင်မရာ စတင်ဖွင့်မည်</button>
-    </div>
-
-    <div class="controls" id="controls-panel">
-        <div class="input-group">
-            <input type="text" id="my-custom-id" placeholder="ကိုယ့် ID အမည် (ဥပမာ - A1)">
-            <button id="set-id-btn" class="btn-blue">မှတ်မည်</button>
-            <button id="reset-id-btn" class="btn-red">ဖျက်ရန်</button>
+    <div class="app-header">
+        <div class="user-info">
+            <span class="app-title">V Call (ထွန်းထွန်းနောင်)</span>
+            <span id="my-id-display">လိုင်းချိတ်ဆက်နေသည်...</span>
         </div>
-        <div class="input-group">
-            <input type="text" id="peer-id-input" placeholder="ချိတ်မည့်သူ့ ID ထည့်ရန်" disabled>
-            <button id="connect-btn" disabled>ခေါ်ဆိုမည်</button>
-            <button id="hangup-btn" class="btn-red" disabled>ဖုန်းချမည်</button>
+        <div class="call-actions">
+            <button id="call-btn">📞 Video Call</button>
         </div>
     </div>
 
-    <div class="video-grid layout-1" id="video-grid">
-        <div class="video-box" id="local-box">
-            <video id="local-video" autoplay muted playsinline></video>
-            <div class="label">ကိုယ် (Local)</div>
-        </div>
+    <div class="video-container" id="video-area">
+        <video id="local-video" autoplay muted playsinline></video>
+        <video id="remote-video" autoplay playsinline></video>
+        <button class="end-call-btn" id="end-call-btn">ဖုန်းချရန်</button>
     </div>
 
-    <div class="status-box" id="status-text">ကင်မရာ ဖွင့်ရန် ခလုတ်ကို နှိပ်ပါ</div>
+    <div class="chat-container" id="chat-container"></div>
 
-    <script>
-        const startScreen = document.getElementById('start-screen');
-        const controlsPanel = document.getElementById('controls-panel');
-        const startCamBtn = document.getElementById('start-cam-btn');
-        const videoGrid = document.getElementById('video-grid');
-        const localVideo = document.getElementById('local-video');
-        const myCustomIdInput = document.getElementById('my-custom-id');
-        const setIdBtn = document.getElementById('set-id-btn');
-        const resetIdBtn = document.getElementById('reset-id-btn');
-        const peerIdInput = document.getElementById('peer-id-input');
-        const connectBtn = document.getElementById('connect-btn');
-        const hangupBtn = document.getElementById('hangup-btn');
-        const statusText = document.getElementById('status-text');
+    <div class="input-area">
+        <label class="icon-btn" for="file-input">📷</label>
+        <input type="file" id="file-input" accept="image/*">
+        <input type="text" id="text-input" placeholder="စာရိုက်ပါ...">
+        <button id="send-btn">➔</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://gstatic.com";
+        import { getDatabase, ref, push, set, onChildAdded, onValue, remove } from "https://gstatic.com";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://gstatic.com";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_obkR0Gcuw9LiVkpvbrj4BwAbsin4eig",
+            authDomain: "://firebaseapp.com",
+            projectId: "my-vcall-app",
+            storageBucket: "my-vcall-app.firebasestorage.app",
+            messagingSenderId: "40185075160",
+            appId: "1:40185075160:web:980195d514b1f53fe00ead",
+            measurementId: "G-84FFEXTMLX"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const storage = getStorage(app);
+
+        const myUserId = "User_" + Math.floor(1000 + Math.random() * 9000);
+        document.getElementById('my-id-display').innerText = "သင့် ID: " + myUserId;
+
+        const chatContainer = document.getElementById('chat-container');
+        const textInput = document.getElementById('text-input');
+        const fileInput = document.getElementById('file-input');
+        const sendBtn = document.getElementById('send-btn');
+        const callBtn = document.getElementById('call-btn');
+        const endCallBtn = document.getElementById('end-call-btn');
+        const videoArea = document.getElementById('video-area');
 
         let localStream;
-        let peer;
-        let activeCalls = {};
+        let peerConnection;
+        const rtcConfig = { iceServers: [{ urls: "stun:://google.com" }] };
 
-        function updateGridLayout() {
-            const boxes = videoGrid.querySelectorAll('.video-box');
-            const count = boxes.length;
-            videoGrid.className = 'video-grid layout-' + Math.min(count, 4);
-            // ချိတ်ဆက်ထားသူ ရှိမှသာ ဖုန်းချမည်ခလုတ် ပွင့်မည်
-            hangupBtn.disabled = (Object.keys(activeCalls).length === 0);
+        function sendMessage(text, imageUrl = null) {
+            const messagesRef = ref(database, 'messages');
+            const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            push(messagesRef, {
+                sender: myUserId,
+                text: text,
+                imageUrl: imageUrl,
+                time: timeString
+            });
+            textInput.value = '';
+            fileInput.value = '';
         }
 
-        startCamBtn.addEventListener('click', () => {
-            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-                .then(stream => {
-                    localStream = stream;
-                    localVideo.srcObject = stream;
-                    startScreen.style.display = 'none';
-                    controlsPanel.style.display = 'flex';
+        sendBtn.addEventListener('click', async () => {
+            const text = textInput.value.trim();
+            const file = fileInput.files[0];
+            if (!text && !file) return;
 
-                    const savedId = localStorage.getItem('saved_group_id');
-                    if (savedId) {
-                        myCustomIdInput.value = savedId;
-                        initPeer(savedId);
-                    } else {
-                        statusText.innerText = "ကင်မရာပွင့်ပြီ၊ ကိုယ့် ID အမည် သတ်မှတ်ပါ";
-                    }
-                })
-                .catch(err => {
-                    alert('ကင်မရာ (သို့) မိုက်ဖုန်း ခွင့်ပြုချက် ပိတ်ထားပါသည် သို့မဟုတ် အသုံးမပြုနိုင်ပါ။');
-                });
+            sendBtn.disabled = true;
+            if (file) {
+                const fRef = storageRef(storage, 'images/' + Date.now() + '_' + file.name);
+                try {
+                    await uploadBytes(fRef, file);
+                    const url = await getDownloadURL(fRef);
+                    sendMessage(text, url);
+                } catch(e) { alert("Error uploading image"); }
+            } else {
+                sendMessage(text);
+            }
+            sendBtn.disabled = false;
         });
 
-        function initPeer(id) {
-            if (peer) peer.destroy();
-            peer = new Peer(id);
+        textInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
 
-            peer.on('open', (assignedId) => {
-                statusText.innerText = "ကိုယ့် ID: " + assignedId + " (အသင့်ဖြစ်ပါပြီ)";
-                myCustomIdInput.disabled = true;
-                setIdBtn.disabled = true;
-                peerIdInput.disabled = false;
-                connectBtn.disabled = false;
-            });
+        onChildAdded(ref(database, 'messages'), (snapshot) => {
+            const data = snapshot.val();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${data.sender === myUserId ? 'sent' : 'received'}`;
+            let content = data.imageUrl ? `<img src="${data.imageUrl}">` : '';
+            content += data.text ? `<p>${data.text}</p>` : '';
+            content += `<span class="time">${data.time}</span>`;
+            msgDiv.innerHTML = content;
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
 
-            peer.on('error', (err) => {
-                if (err.type === 'unavailable-id') {
-                    alert('ဤ ID ကို အခြားသူ ယူထားပြီးပါပြီ။ နာမည်အသစ်ပြောင်းပါ။');
-                    localStorage.removeItem('saved_group_id');
-                    myCustomIdInput.disabled = false;
-                    setIdBtn.disabled = false;
-                } else {
-                    alert('Error: ' + err.type);
+        async function startWebcam() {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('local-video').srcObject = localStream;
+        }
+
+        async function createPeer(callId) {
+            peerConnection = new RTCPeerConnection(rtcConfig);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remote-video').srcObject = event.streams[0];
+            };
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    push(ref(database, `calls/${callId}/candidates`), event.candidate.toJSON());
                 }
-            });
-
-            peer.on('call', (call) => {
-                call.answer(localStream);
-                setupCall(call);
-            });
+            };
         }
 
-        function setupCall(call) {
-            const remotePeerId = call.peer;
-            if (activeCalls[remotePeerId]) return;
+        callBtn.addEventListener('click', async () => {
+            const targetId = prompt("သင်ခေါ်ဆိုလိုသော တစ်ဖက်လူ၏ ID ကို ရိုက်ထည့်ပါ:");
+            if (!targetId) return;
 
-            if (Object.keys(activeCalls).length >= 3) {
-                call.close();
-                return;
-            }
+            videoArea.style.display = "flex";
+            await startWebcam();
+            await createPeer(targetId);
 
-            activeCalls[remotePeerId] = call;
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
 
-            const videoBox = document.createElement('div');
-            videoBox.className = 'video-box';
-            videoBox.id = 'box-' + remotePeerId;
-
-            const remoteVideo = document.createElement('video');
-            remoteVideo.autoplay = true;
-            remoteVideo.playsinline = true;
-
-            const label = document.createElement('div');
-            label.className = 'label';
-            label.innerText = remotePeerId;
-
-            videoBox.appendChild(remoteVideo);
-            videoBox.appendChild(label);
-            videoGrid.appendChild(videoBox);
-
-            updateGridLayout();
-
-            call.on('stream', (remoteStream) => {
-                remoteVideo.srcObject = remoteStream;
-                statusText.innerText = remotePeerId + " နှင့် ချိတ်ဆက်ပြီးပါပြီ";
+            await set(ref(database, `calls/${targetId}`), {
+                offer: { type: offer.type, sdp: offer.sdp },
+                caller: myUserId
             });
 
-            call.on('close', () => {
-                removeRemoteBox(remotePeerId);
-            });
+            onValue(ref(database, `calls/${targetId}/answer`), async (snapshot) => {
+                const answer = snapshot.val();
 
-            call.on('error', () => {
-                removeRemoteBox(remotePeerId);
-            });
-        }
-
-        function removeRemoteBox(remotePeerId) {
-            const box = document.getElementById('box-' + remotePeerId);
-            if (box) box.remove();
-            delete activeCalls[remotePeerId];
-            updateGridLayout();
-            statusText.innerText = remotePeerId + " ထွက်သွားပါပြီ";
-        }
-
-        // ဖုန်းချမည် ခလုတ်နှိပ်သည့်အခါ
-        hangupBtn.addEventListener('click', () => {
-            Object.keys(activeCalls).forEach(id => {
-                const call = activeCalls[id];
-                if (call) call.close();
-                const box = document.getElementById('box-' + id);
-                if (box) box.remove();
-            });
-            activeCalls = {};
-            updateGridLayout();
-            statusText.innerText = "ဖုန်းချလိုက်ပါပြီ။ ချိတ်ဆက်မှုများ ပြီးဆုံးပါပြီ။";
-        });
-
-        setIdBtn.addEventListener('click', () => {
-            const customId = myCustomIdInput.value.trim();
-            if (!customId) {
-                alert('ကျေးဇူးပြု၍ ကိုယ့် ID အမည် ထည့်ပါ။');
-                return;
-            }
-            localStorage.setItem('saved_group_id', customId);
-            initPeer(customId);
-        });
-
-        resetIdBtn.addEventListener('click', () => {
-            localStorage.removeItem('saved_group_id');
-            myCustomIdInput.disabled = false;
-            setIdBtn.disabled = false;
-            peerIdInput.disabled = true;
-            connectBtn.disabled = true;
-            hangupBtn.disabled = true;
-            myCustomIdInput.value = "";
-            statusText.innerText = "ID ဖျက်ပြီးပါပြီ။";
-            if (peer) peer.destroy();
-
-            Object.keys(activeCalls).forEach(id => {
-                const box = document.getElementById('box-' + id);
-                if (box) box.remove();
-            });
-            activeCalls = {};
-            updateGridLayout();
-        });
-
-        connectBtn.addEventListener('click', () => {
-            const targetId = peerIdInput.value.trim();
-            if (!targetId) {
-                alert('ချိတ်မည့်သူ၏ ID ကို ထည့်ပါ။');
-                return;
-            }
-            if (activeCalls[targetId]) {
-                alert('ဤသူနှင့် ချိတ်ဆက်ပြီးသား ဖြစ်ပါသည်။');
-                return;
-            }
-            if (Object.keys(activeCalls).length >= 3) {
-                alert('အခန်းတွဲတွင် လူပြည့်နေပါပြီ (အများဆုံး ၄ ယောက်)။');
-                return;
-            }
-
-            statusText.innerText = targetId + " သို့ ချိတ်ဆက်နေသည်...";
-            const call = peer.call(targetId, localStream);
-            setupCall(call);
-            peerIdInput.value = "";
-        });
-    </script>
-</body>
-</html>
