@@ -54,7 +54,6 @@
             gap: 4px; padding: 4px; background: #000;
             padding-top: 85px;
         }
-        /* လူအရေအတွက်အလိုက် ကွက်လပ်ပြောင်းလဲပုံ */
         .video-grid.layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
         .video-grid.layout-2 { grid-template-columns: 1fr; grid-template-rows: repeat(2, 1fr); }
         .video-grid.layout-3, .video-grid.layout-4 { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(2, 1fr); }
@@ -101,7 +100,7 @@
         </div>
     </div>
 
-    <!-- ဗီဒီယိုကွက်လပ်များကို လူဝင်လာမှသာ အလိုအလျောက် ထည့်သွင်းမည် -->
+    <!-- စစချင်းတွင် ကိုယ့်ဗီဒီယို ၁ ကွက်တည်းသာ ရှိမည် -->
     <div class="video-grid layout-1" id="video-grid">
         <div class="video-box" id="local-box">
             <video id="local-video" autoplay muted playsinline></video>
@@ -130,7 +129,7 @@
 
         function updateGridLayout() {
             const boxes = videoGrid.querySelectorAll('.video-box');
-            const count = boxes.length; // ၁ မှ ၄ အထိ
+            const count = boxes.length;
             videoGrid.className = 'video-grid layout-' + Math.min(count, 4);
         }
 
@@ -188,7 +187,6 @@
             const remotePeerId = call.peer;
             if (activeCalls[remotePeerId]) return;
 
-            // အများဆုံး ၃ ယောက် (စုစုပေါင်း ၄ ယောက်) ထက်ပိုမိုချိတ်ဆက်မှုကို ကန့်သတ်ရန်
             if (Object.keys(activeCalls).length >= 3) {
                 call.close();
                 return;
@@ -196,7 +194,6 @@
 
             activeCalls[remotePeerId] = call;
 
-            // သူငယ်ချင်းအတွက် ဗီဒီယိုကွက်လပ်အသစ်ကို အလိုအလျောက် ဖန်တီးမည်
             const videoBox = document.createElement('div');
             videoBox.className = 'video-box';
             videoBox.id = 'box-' + remotePeerId;
@@ -257,7 +254,6 @@
             statusText.innerText = "ID ဖျက်ပြီးပါပြီ။";
             if (peer) peer.destroy();
 
-            // ချိတ်ဆက်ထားသမျှ သူငယ်ချင်းများ၏ Box များကို ဖျက်မည်
             Object.keys(activeCalls).forEach(id => {
                 const box = document.getElementById('box-' + id);
                 if (box) box.remove();
