@@ -28,10 +28,10 @@
         #send-btn { background-color: #00a884; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 16px; font-weight: bold; }
     </style>
     
-    <!-- Firebase Libraries (v8 ကို စနစ်တကျ ပြန်ပြင်ထားသည်) -->
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
+    <!-- Firebase Libraries (v8 Correct CDNs) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
 </head>
 <body>
 
@@ -64,7 +64,7 @@
         // သင့်ရဲ့ Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD_obkR0Gcuw9LiVkpvbrj4BwAbsin4eig",
-            authDomain: "://firebaseapp.com",
+            authDomain: "my-vcall-app.firebaseapp.com",
             projectId: "my-vcall-app",
             storageBucket: "my-vcall-app.firebasestorage.app",
             messagingSenderId: "40185075160",
@@ -91,7 +91,7 @@
 
         let localStream;
         let peerConnection;
-        const rtcConfig = { iceServers: [{ urls: "stun:://google.com" }] };
+        const rtcConfig = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
         let activeCallId = null;
 
         // --- စာပို့စနစ် ---
@@ -149,7 +149,7 @@
                 document.getElementById('local-video').srcObject = localStream;
                 videoArea.style.display = 'flex';
             } catch (e) {
-                alert("ကင်မရာ သို့မဟုတ် မိုက်ခရိုဖုန်း ခွင့်ပြုချက် လိုအပ်ပါသည်၏");
+                alert("ကင်မရာ သို့မဟုတ် မိုက်ခရိုဖုန်း ခွင့်ပြုချက် လိုအပ်ပါသည်");
             }
         }
 
@@ -173,7 +173,7 @@
             };
         }
 
-        // ဖုန်းစတင်ခေါ်ဆိုခြင်း (Offer)
+        // ဖုန်းစတင်ခေါ်ဆိုခြင်း (Caller Side)
         callBtn.addEventListener('click', async () => {
             const targetId = prompt("သင်ခေါ်ဆိုလိုသော တစ်ဖက်လူ၏ ID ကို ရိုက်ထည့်ပါ:");
             if (!targetId || targetId.trim() === "") return;
@@ -195,7 +195,7 @@
             // တစ်ဖက်လူ ဖုန်းလက်ခံလိုက်သည့်အချိန် (Answer ကို စောင့်ဖတ်ခြင်း)
             database.ref(`calls/${activeCallId}/answer`).on('value', async (snapshot) => {
                 const answer = snapshot.val();
-                if (answer && !peerConnection.currentRemoteDescription) {
+                if (answer && peerConnection && !peerConnection.currentRemoteDescription) {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
                 }
             });
@@ -203,6 +203,64 @@
             // ICE Candidates များကို ချိတ်ဆက်ပေးခြင်း
             database.ref(`calls/${activeCallId}/candidates`).on('child_added', (snapshot) => {
                 const candidate = new RTCIceCandidate(snapshot.val());
-                peerConnection.addIceCandidate(candidate).catch(e => {});
+                if (peerConnection) {
+                    peerConnection.addIceCandidate(candidate).catch(e => {});
+                }
             });
+        });
 
+        // ဖုန်းဝင်လာသည်ကို လက်ခံခြင်း (Receiver Side)
+        database.ref('calls').orderByChild('target').equalTo(myUserId).on('child_added', async (snapshot) => {
+            const callData = snapshot.val();
+            const callId = snapshot.key;
+
+            if (callData && callData.status === "calling") {
+                const accept = confirm(`${callData.caller} ထံမှ Video Call ဝင်လာပါသည်... လက်ခံမည်လား?`);
+                if (accept) {
+                    activeCallId = callId;
+                    await startWebcam();
+                    await createPeer(activeCallId);
+
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+
+                    await database.ref(`calls/${activeCallId}`).update({
+                        answer: { type: answer.type, sdp: answer.sdp },
+                        status: "answered"
+                    });
+
+                    // ICE Candidates များကို ချိတ်ဆက်ပေးခြင်း
+                    database.ref(`calls/${activeCallId}/candidates`).on('child_added', (snapshot) => {
+                        const candidate = new RTCIceCandidate(snapshot.val());
+                        if (peerConnection) {
+                            peerConnection.addIceCandidate(candidate).catch(e => {});
+                        }
+                    });
+                } else {
+                    database.ref(`calls/${activeCallId}`).update({ status: "rejected" });
+                }
+            }
+        });
+
+        // ဖုန်းချခြင်းစနစ်
+        endCallBtn.addEventListener('click', () => {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            videoArea.style.display = 'none';
+            document.getElementById('local-video').srcObject = null;
+            document.getElementById('remote-video').srcObject = null;
+
+            if (activeCallId) {
+                database.ref(`calls/${activeCallId}`).remove();
+                activeCallId = null;
+            }
+        });
+    </script>
+</body>
+</html>
