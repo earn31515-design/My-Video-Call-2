@@ -6,152 +6,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>V Call App</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: Arial, sans-serif;
-        }
-        body {
-            background-color: #efeae2;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
-        .app-header {
-            background-color: #008069;
-            color: white;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .user-info {
-            display: flex;
-            flex-direction: column;
-        }
-        .app-title {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        #my-id-display {
-            font-size: 12px;
-            color: #b3dfd6;
-        }
-        .call-actions button {
-            background-color: #01a884;
-            color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .video-container {
-            display: none;
-            background-color: #111b21;
-            padding: 10px;
-            position: relative;
-            height: 250px;
-            gap: 10px;
-            justify-content: center;
-        }
-        video {
-            width: 48%;
-            height: 100%;
-            background-color: #222;
-            border-radius: 8px;
-            object-fit: cover;
-        }
-        .end-call-btn {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #ea0038;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            border-radius: 20px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            background-color: #efeae2;
-        }
-        .message {
-            max-width: 80%;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 15px;
-            position: relative;
-            word-wrap: break-word;
-        }
-        .message.sent {
-            background-color: #d9fdd3;
-            align-self: flex-end;
-        }
-        .message.received {
-            background-color: white;
-            align-self: flex-start;
-        }
-        .message img {
-            max-width: 100%;
-            border-radius: 6px;
-            display: block;
-        }
-        .message .time {
-            font-size: 10px;
-            color: #667781;
-            display: block;
-            text-align: right;
-            margin-top: 4px;
-        }
-        .input-area {
-            background-color: #f0f2f5;
-            padding: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .icon-btn {
-            font-size: 22px;
-            cursor: pointer;
-        }
-        #file-input {
-            display: none;
-        }
-        #text-input {
-            flex: 1;
-            padding: 10px 16px;
-            border: none;
-            border-radius: 20px;
-            outline: none;
-            background-color: white;
-        }
-        #send-btn {
-            background-color: #00a884;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        body { background-color: #efeae2; display: flex; flex-direction: column; height: 100vh; }
+        .app-header { background-color: #008069; color: white; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+        .user-info { display: flex; flex-direction: column; }
+        .app-title { font-size: 18px; font-weight: bold; }
+        #my-id-display { font-size: 12px; color: #b3dfd6; }
+        .call-actions button { background-color: #01a884; color: white; border: none; padding: 8px 14px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .video-container { display: none; background-color: #111b21; padding: 10px; position: relative; height: 250px; gap: 10px; justify-content: center; }
+        video { width: 48%; height: 100%; background-color: #222; border-radius: 8px; object-fit: cover; }
+        .end-call-btn { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background-color: #ea0038; color: white; border: none; padding: 8px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+        .chat-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; background-color: #efeae2; }
+        .message { max-width: 80%; padding: 8px 12px; border-radius: 8px; font-size: 15px; position: relative; word-wrap: break-word; }
+        .message.sent { background-color: #d9fdd3; align-self: flex-end; }
+        .message.received { background-color: white; align-self: flex-start; }
+        .message img { max-width: 100%; border-radius: 6px; display: block; }
+        .message .time { font-size: 10px; color: #667781; display: block; text-align: right; margin-top: 4px; }
+        .input-area { background-color: #f0f2f5; padding: 10px; display: flex; align-items: center; gap: 8px; }
+        .icon-btn { font-size: 22px; cursor: pointer; }
+        #file-input { display: none; }
+        #text-input { flex: 1; padding: 10px 16px; border: none; border-radius: 20px; outline: none; background-color: white; }
+        #send-btn { background-color: #00a884; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 16px; font-weight: bold; }
     </style>
-</script>
+    <!-- Firebase Libraries များကို ပိုမိုအဆင်ပြေမည့် CDN ကနေ ကြိုတင်ဖတ်ရှုခြင်း -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
 </head>
 <body>
 
     <div class="app-header">
         <div class="user-info">
-            <span class="app-title">ဦးထွန်းနောင်၏ ကိုယ်ပိုင် Vcall</span>
+            <span class="app-title">ဦးထွန်းနောင်၏ကိုယ်ပိုင် Vcall</span>
             <span id="my-id-display">လိုင်းချိတ်ဆက်နေသည်...</span>
         </div>
         <div class="call-actions">
@@ -174,11 +60,8 @@
         <button id="send-btn">➔</button>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://gstatic.com";
-        import { getDatabase, ref, push, set, onChildAdded, onValue, remove } from "https://gstatic.com";
-        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://gstatic.com";
-
+    <script>
+        // သင့်ရဲ့ Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyD_obkR0Gcuw9LiVkpvbrj4BwAbsin4eig",
             authDomain: "://firebaseapp.com",
@@ -189,10 +72,12 @@
             measurementId: "G-84FFEXTMLX"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
-        const storage = getStorage(app);
+        // Firebase Initialize လုပ်ခြင်း
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const storage = firebase.storage();
 
+        // အသုံးပြုသူ ID သတ်မှတ်ခြင်း
         const myUserId = "User_" + Math.floor(1000 + Math.random() * 9000);
         document.getElementById('my-id-display').innerText = "သင့် ID: " + myUserId;
 
@@ -208,10 +93,10 @@
         let peerConnection;
         const rtcConfig = { iceServers: [{ urls: "stun:://google.com" }] };
 
+        // --- စာပို့စနစ် ---
         function sendMessage(text, imageUrl = null) {
-            const messagesRef = ref(database, 'messages');
             const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            push(messagesRef, {
+            database.ref('messages').push({
                 sender: myUserId,
                 text: text,
                 imageUrl: imageUrl,
@@ -228,10 +113,10 @@
 
             sendBtn.disabled = true;
             if (file) {
-                const fRef = storageRef(storage, 'images/' + Date.now() + '_' + file.name);
+                const fRef = storage.ref('images/' + Date.now() + '_' + file.name);
                 try {
-                    await uploadBytes(fRef, file);
-                    const url = await getDownloadURL(fRef);
+                    await fRef.put(file);
+                    const url = await fRef.getDownloadURL();
                     sendMessage(text, url);
                 } catch(e) { alert("Error uploading image"); }
             } else {
@@ -242,7 +127,7 @@
 
         textInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendBtn.click(); });
 
-        onChildAdded(ref(database, 'messages'), (snapshot) => {
+        database.ref('messages').on('child_added', (snapshot) => {
             const data = snapshot.val();
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${data.sender === myUserId ? 'sent' : 'received'}`;
@@ -254,20 +139,27 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
         });
 
+        // --- Video Call စနစ် ---
         async function startWebcam() {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById('local-video').srcObject = localStream;
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+            } catch (e) {
+                alert("ကင်မရာ သို့မဟုတ် မိုက်ခရိုဖုန်း ခွင့်ပြုချက် လိုအပ်ပါသည်၏");
+            }
         }
 
         async function createPeer(callId) {
             peerConnection = new RTCPeerConnection(rtcConfig);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            if(localStream) {
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            }
             peerConnection.ontrack = (event) => {
                 document.getElementById('remote-video').srcObject = event.streams[0];
             };
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
-                    push(ref(database, `calls/${callId}/candidates`), event.candidate.toJSON());
+                    database.ref(`calls/${callId}/candidates`).push(event.candidate.toJSON());
                 }
             };
         }
@@ -283,11 +175,31 @@
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
 
-            await set(ref(database, `calls/${targetId}`), {
+            await database.ref(`calls/${targetId}`).set({
                 offer: { type: offer.type, sdp: offer.sdp },
                 caller: myUserId
             });
 
-            onValue(ref(database, `calls/${targetId}/answer`), async (snapshot) => {
+            database.ref(`calls/${targetId}/answer`).on('value', async (snapshot) => {
                 const answer = snapshot.val();
+                if (answer && peerConnection.signalingState !== "stable") {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                }
+            });
+
+            database.ref(`calls/${targetId}/candidates`).on('child_added', (snapshot) => {
+                const candidate = snapshot.val();
+                if (candidate) peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            });
+        });
+
+        database.ref(`calls/${myUserId}`).on('value', async (snapshot) => {
+            const callData = snapshot.val();
+            if (callData && callData.offer && !peerConnection) {
+                if (confirm(`${callData.caller} ထံမှ Video Call လာနေပါသည်။ လက်ခံမလား?`)) {
+                    videoArea.style.display = "flex";
+                    await startWebcam();
+                    await createPeer(myUserId);
+
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(callData.offer));
 
