@@ -1,139 +1,251 @@
-Skip to main content
-GitHub Docs
-Search or ask Copilot
-/
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Video Call</title>
+    
+    <!-- PWA Web Manifest (PWABuilder အဆင်ပြေစေရန် တိုက်ရိုက်ထည့်သွင်းထားသည်) -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"My Video Call","short_name":"VideoCall","description":"A secure P2P Video Communication App","start_url":"./","display":"standalone","background_color":"#000000","theme_color":"#000000","icons":[{"src":"https://via.placeholder.com/192.png?text=VideoCall","sizes":"192x192","type":"image/png"},{"src":"https://via.placeholder.com/512.png?text=VideoCall","sizes":"512x512","type":"image/png"}]}'>
+    <meta name="theme-color" content="#000000">
 
-Menu
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            background: #000; color: #fff;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+        .controls {
+            position: absolute;
+            top: 8px; left: 8px; right: 8px;
+            z-index: 100;
+            display: flex; flex-direction: column; gap: 5px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 8px; border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+        .input-group {
+            display: flex; gap: 5px;
+        }
+        input {
+            flex: 1; padding: 6px 8px; font-size: 13px;
+            border-radius: 4px; border: 1px solid #444;
+            background: #222; color: #fff;
+        }
+        button {
+            padding: 6px 12px; background: #4CAF50;
+            color: white; border: none; border-radius: 4px;
+            font-size: 13px; font-weight: bold; cursor: pointer;
+        }
+        button:disabled { background: #555; cursor: not-allowed; }
+        .btn-blue { background: #2196F3; }
+        .btn-red { background: #f44336; padding: 6px 8px; font-size: 11px; }
+        
+        .video-container {
+            width: 100vw; height: 100vh;
+            display: flex; position: relative;
+        }
+        video {
+            width: 100%; height: 100%;
+            object-fit: cover; background: #111;
+        }
+        #remote-video {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%; z-index: 1;
+        }
+        #local-video {
+            position: absolute; bottom: 15px; right: 15px;
+            width: 90px; height: 120px;
+            border-radius: 8px; border: 2px solid #fff;
+            z-index: 10; object-fit: cover;
+        }
+        .status-box {
+            position: absolute;
+            bottom: 15px; left: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #444;
+            padding: 6px 10px; border-radius: 6px;
+            font-size: 12px; z-index: 10;
+            color: #ff9800;
+        }
+    </style>
+</head>
+<body>
 
-Home
-GitHub Pages
-Get started
-Configure publishing source
+    <div class="controls">
+        <div class="input-group">
+            <input type="text" id="my-custom-id" placeholder="ကိုယ့် ID အမည် (ဥပမာ - 777)">
+            <button id="set-id-btn" class="btn-blue">မှတ်မည်</button>
+            <button id="reset-id-btn" class="btn-red" title="ID ပြောင်းရန်">ဖျက်ရန်</button>
+        </div>
+        <div class="input-group">
+            <input type="text" id="peer-id-input" placeholder="ချိတ်မည့်သူ့ ID ထည့်ရန်" disabled>
+            <button id="connect-btn" disabled>ခေါ်ဆိုမည်</button>
+        </div>
+    </div>
 
-In this article
-Configuring a publishing source for your GitHub Pages site
-You can configure your GitHub Pages site to publish when changes are pushed to a specific branch, or you can write a GitHub Actions workflow to publish your site.
+    <div class="video-container">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay muted playsinline></video>
+        <div class="status-box" id="status-text">အခြေအနေ - ကင်မရာဖွင့်နေသည်...</div>
+    </div>
 
-Who can use this feature?
-People with admin or maintainer permissions for a repository can configure a publishing source for a GitHub Pages site.
+    <script>
+        // PWABuilder အဆင်ပြေစေရန် Inline Service Worker အလိုအလျောက် သတ်မှတ်ခြင်း
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', (e) => self.skipWaiting());
+                self.addEventListener('activate', (e) => self.clients.claim());
+                self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request)));
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl).catch(() => {});
+        }
 
-GitHub Pages is available in public repositories with GitHub Free and GitHub Free for organizations, and in public and private repositories with GitHub Pro, GitHub Team, GitHub Enterprise Cloud, and GitHub Enterprise Server. See GitHub's plans.
+        const localVideo = document.getElementById('local-video');
+        const remoteVideo = document.getElementById('remote-video');
+        const myCustomIdInput = document.getElementById('my-custom-id');
+        const setIdBtn = document.getElementById('set-id-btn');
+        const resetIdBtn = document.getElementById('reset-id-btn');
+        const peerIdInput = document.getElementById('peer-id-input');
+        const connectBtn = document.getElementById('connect-btn');
+        const statusText = document.getElementById('status-text');
 
-About publishing sources
-You can publish your site when changes are pushed to a specific branch, or you can write a GitHub Actions workflow to publish your site.
+        let localStream;
+        let peer;
+        let ringAudioCtx;
+        let ringInterval;
+        let wakeLock = null;
 
-If you do not need any control over the build process for your site, we recommend that you publish your site when changes are pushed to a specific branch. You can specify which branch and folder to use as your publishing source. The source branch can be any branch in your repository, and the source folder can either be the root of the repository (/) on the source branch or a /docs folder on the source branch. Whenever changes are pushed to the source branch, the changes in the source folder will be published to your GitHub Pages site.
+        // ဖုန်းစခရင် အလိုအလျောက် မပိတ်သွားစေရန် တားဆီးသည့်စနစ် (Wake Lock)
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        }
 
-If you want to use a build process other than Jekyll or you do not want a dedicated branch to hold your compiled static files, we recommend that you write a GitHub Actions workflow to publish your site. GitHub provides workflow templates for common publishing scenarios to help you write your workflow.
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
 
-Warning
+        function startRinging() {
+            try {
+                if (ringInterval) return;
+                ringAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                ringInterval = setInterval(() => {
+                    if (!ringAudioCtx) return;
+                    let osc = ringAudioCtx.createOscillator();
+                    let gain = ringAudioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, ringAudioCtx.currentTime);
+                    osc.frequency.setValueAtTime(480, ringAudioCtx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.2, ringAudioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ringAudioCtx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(ringAudioCtx.destination);
+                    osc.start();
+                    osc.stop(ringAudioCtx.currentTime + 0.4);
+                }, 1000);
+            } catch(e) { console.log(e); }
+        }
 
-GitHub Pages sites are publicly available on the internet, even if the repository for the site is private (if your plan or organization allows it). If you have sensitive data in your site's repository, you may want to remove the data before publishing. For more information, see About repositories.
+        function stopRinging() {
+            if (ringInterval) {
+                clearInterval(ringInterval);
+                ringInterval = null;
+            }
+            if (ringAudioCtx) {
+                ringAudioCtx.close();
+                ringAudioCtx = null;
+            }
+        }
 
-Publishing from a branch
-Make sure the branch you want to use as your publishing source already exists in your repository.
+        function initPeer(id) {
+            if (peer) {
+                peer.destroy();
+            }
 
-On GitHub, navigate to your site's repository.
+            peer = new Peer(id);
 
-Under your repository name, click  Settings. If you cannot see the "Settings" tab, select the  dropdown menu, then click Settings.
+            peer.on('open', (assignedId) => {
+                statusText.innerText = "ကိုယ့် ID: " + assignedId;
+                myCustomIdInput.disabled = true;
+                setIdBtn.disabled = true;
+                peerIdInput.disabled = false;
+                connectBtn.disabled = false;
+            });
 
-Screenshot of a repository header showing the tabs. The "Settings" tab is highlighted by a dark orange outline.
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    alert('ဤ ID ကို အခြားသူ ယူထားပြီးပါပြီ။ နာမည်အသစ်ပြောင်းပါ။');
+                    localStorage.removeItem('saved_peer_id');
+                    myCustomIdInput.disabled = false;
+                    setIdBtn.disabled = false;
+                } else {
+                    alert('Error: ' + err.type);
+                }
+            });
 
-In the "Code, planning, and automation" section of the sidebar, click  Pages.
+            peer.on('call', (call) => {
+                statusText.innerText = "ဖုန်းဝင်လာပါပြီ...";
+                startRinging();
 
-Under "Build and deployment", under "Source", select Deploy from a branch.
+                call.answer(localStream);
+                
+                call.on('stream', (remoteStream) => {
+                    stopRinging();
+                    remoteVideo.srcObject = remoteStream;
+                    statusText.innerText = "ချိတ်ဆက်နေပါပြီ (Connected)";
+                    statusText.style.color = "#4CAF50";
+                });
+            });
+        }
 
-Under "Build and deployment", use the branch dropdown menu and select a publishing source. Screenshot of Pages settings in a GitHub repository. A menu to select a branch for a publishing source, labeled "None," is outlined in dark orange.
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                localStream = stream;
+                localVideo.srcObject = stream;
+                requestWakeLock();
 
-Optionally, use the folder dropdown menu to select a folder for your publishing source. Screenshot of Pages settings in a GitHub repository. A menu to select a folder for a publishing source, labeled "/(root)," is outlined in dark orange.
+                const savedId = localStorage.getItem('saved_peer_id');
+                if (savedId) {
+                    myCustomIdInput.value = savedId;
+                    statusText.innerText = "သိမ်းဆည်းထားသော ID ဖြင့် ချိတ်ဆက်နေသည်...";
+                    initPeer(savedId);
+                } else {
+                    statusText.innerText = "ကင်မရာပွင့်ပြီ၊ ID အသစ်သတ်မှတ်ပါ";
+                }
+            })
+            .catch(err => {
+                alert('ကင်မရာ (သို့) မိုက်ခရိုဖုန်း ခွင့်ပြုချက်မရှိပါ။');
+            });
 
-Click Save.
+        setIdBtn.addEventListener('click', () => {
+            const customId = myCustomIdInput.value.trim();
+            if (!customId) {
+                alert('ကျေးဇူးပြု၍ ကိုယ့် ID အမည်ကို ထည့်ပါ။');
+                return;
+            }
+            if (!localStream) {
+                alert('ကင်မရာ ဖွင့်ခွင့်ပြုချက် မရှိသေးပါ။');
+                return;
+            }
 
-Troubleshooting publishing from a branch
-Note
+            localStorage.setItem('saved_peer_id', customId);
+            initPeer(customId);
+        });
 
-If your repository contains symbolic links, you will need to publish your site using a GitHub Actions workflow. For more information about GitHub Actions, see GitHub Actions documentation.
-
-Note
-
-If you are publishing from a branch and your site has not published automatically, make sure someone with admin permissions and a verified email address has pushed to the publishing source.
-Commits pushed by a GitHub Actions workflow that uses the GITHUB_TOKEN do not trigger a GitHub Pages build.
-If you choose the docs folder on any branch as your publishing source, then later remove the /docs folder from that branch in your repository, your site won't build and you'll get a page build error message for a missing /docs folder. For more information, see Troubleshooting Jekyll build errors for GitHub Pages sites.
-
-Your GitHub Pages site will always be deployed with a GitHub Actions workflow run, even if you've configured your GitHub Pages site to be built using a different CI tool. Most external CI workflows "deploy" to GitHub Pages by committing the build output to the gh-pages branch of the repository, and typically include a .nojekyll file. When this happens, the GitHub Actions workflow will detect the state that the branch does not need a build step, and will execute only the steps necessary to deploy the site to GitHub Pages servers.
-
-To find potential errors with either the build or deployment, you can check the workflow run for your GitHub Pages site by reviewing your repository's workflow runs. For more information, see Viewing workflow run history. For more information about how to re-run the workflow in case of an error, see Re-running workflows and jobs.
-
-Publishing with a custom GitHub Actions workflow
-To configure your site to publish with GitHub Actions:
-
-On GitHub, navigate to your site's repository.
-
-Under your repository name, click  Settings. If you cannot see the "Settings" tab, select the  dropdown menu, then click Settings.
-
-Screenshot of a repository header showing the tabs. The "Settings" tab is highlighted by a dark orange outline.
-
-In the "Code, planning, and automation" section of the sidebar, click  Pages.
-
-Under "Build and deployment", under "Source", select GitHub Actions.
-
-GitHub will suggest several workflow templates. If you already have a workflow to publish your site, you can skip this step. Otherwise, choose one of the options to create a GitHub Actions workflow. For more information about creating your custom workflow, see Creating a custom GitHub Actions workflow to publish your site.
-
-GitHub Pages does not associate a specific workflow to the GitHub Pages settings. However, the GitHub Pages settings will link to the workflow run that most recently deployed your site.
-
-Creating a custom GitHub Actions workflow to publish your site
-For more information about GitHub Actions, see GitHub Actions documentation.
-
-When you configure your site to publish with GitHub Actions, GitHub will suggest workflow templates for common publishing scenarios. The general flow of a workflow is to:
-
-Trigger whenever there is a push to the default branch of the repository or whenever the workflow is run manually from the Actions tab.
-Use the actions/checkout action to check out the repository contents.
-If required by your site, build any static site files.
-Use the actions/upload-pages-artifact action to upload the static files as an artifact.
-If the workflow was triggered by a push to the default branch, use the actions/deploy-pages action to deploy the artifact. This step is skipped if the workflow was triggered by a pull request.
-The workflow templates use a deployment environment called github-pages. If your repository does not already include an environment called github-pages, the environment will be created automatically. We recommend that you add a deployment protection rule so that only the default branch can deploy to this environment. For more information, see Managing environments for deployment.
-
-Note
-
-A CNAME file in your repository file does not automatically add or remove a custom domain. Instead, you must configure the custom domain through your repository settings or through the API. For more information, see Managing a custom domain for your GitHub Pages site and REST API endpoints for GitHub Pages.
-
-Troubleshooting publishing with a custom GitHub Actions workflow
-For information about how to troubleshoot your GitHub Actions workflow, see Monitor workflows.
-
-
-Back to top
-Help and support
-Was this Doc helpful?
-
-Help us make GitHub Docs great!
-All Docs are open source. See something that's wrong or unclear? Submit a pull request.
-
-Still need help?
-Ask the GitHub community
-Contact support
-Expert services
-Blog
-GitHub Inc. © 2026
-Terms
-Privacy
-Status
-Pricing
-{
-  "background_color": "#ffffff",
-  "dir": "auto",
-  "display": "fullscreen",
-  "name": "earn31515-design.github",
-  "orientation": "any",
-  "scope": "/https://earn31515-design.github.io/My-Video-Call-2/",
-  "short_name": "earn31515-design.github",
-  "start_url": "/https://earn31515-design.github.io/My-Video-Call-2/",
-  "theme_color": "#ffffff",
-  "lang": "en",
-  "display_override": [
-    "browser",
-    "fullscreen",
-    "minimal-ui",
-    "standalone",
-    "window-controls-overlay"
-  ]
-}
+        resetIdBtn.addEventListener('click', () => {
+            localStorage.removeItem('saved_peer_id');
+            myCustomIdInput.disabled =
