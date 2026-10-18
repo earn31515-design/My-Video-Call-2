@@ -61,7 +61,7 @@
     </div>
 
     <script>
-        // သင့်ရဲ့ Firebase Configuration (Project အသစ်အတွက် ပြင်ဆင်ပြီး)
+        // သင့်ရဲ့ Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCZGTy5S6xY6W4l0R4tinzXob2rc_RFeeY",
             authDomain: "my-own-vc-app.firebaseapp.com",
@@ -78,8 +78,12 @@
         const database = firebase.database();
         const storage = firebase.storage();
 
-        // အသုံးပြုသူ ID သတ်မှတ်ခြင်း
-        const myUserId = "User_" + Math.floor(1000 + Math.random() * 9000);
+        // အသုံးပြုသူ ID ကို တစ်သမှတ်တည်းဖြစ်အောင် localStorage ဖြင့် သိမ်းဆည်းခြင်း
+        let myUserId = localStorage.getItem('vcall_user_id');
+        if (!myUserId) {
+            myUserId = "User_" + Math.floor(1000 + Math.random() * 9000);
+            localStorage.setItem('vcall_user_id', myUserId);
+        }
         document.getElementById('my-id-display').innerText = "သင့် ID: " + myUserId;
 
         const chatContainer = document.getElementById('chat-container');
